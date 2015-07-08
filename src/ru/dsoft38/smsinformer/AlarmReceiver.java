@@ -17,14 +17,18 @@ public class AlarmReceiver extends BroadcastReceiver {
 		scheduleAlarms(context);
 	}
 
-	private void scheduleAlarms(Context context) {
+	static void scheduleAlarms(Context context) {
 		long NOW = Calendar.getInstance().getTimeInMillis();
-		startAlarmService(context, NOW);
+		startMailService(context, NOW);
 	}
 
-	static void startAlarmService(Context context, long UTIME) {
-		  Intent i = new Intent(context, AlarmService.class);
-		  i.setAction(AlarmService.SET_ALARM);
+	static void scheduleAlarms(Context ctxt, long TIME) {	  
+		startMailService(ctxt, TIME);
+	}
+	
+	static void startMailService(Context context, long UTIME) {
+		  Intent i = new Intent(context, MailService.class);
+		  i.setAction(MailService.SET_ALARM);
 		  i.putExtra("utime", UTIME);
 		  context.startService(i);	 	  	  
 	  }
