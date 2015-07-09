@@ -16,17 +16,31 @@ public class AlarmDb {
     
     private static final String TB_SEND_SMS = "tbSendSms";
 	private static final String SQL_CREATE_TB_SEND_SMS = "CREATE TABLE " + TB_SEND_SMS + 
-			       " ( _id INTEGER PRIMARY KEY AUTOINCREMENT, number TEXT, msg TEXT );";
+			       " ( _id INTEGER PRIMARY KEY AUTOINCREMENT, phones TEXT, groupid TEXT, msg TEXT );";
 	
-	public void insertAlarm(String NUMBER, String MSG) {
+	public void insertAlarm(String NUMBER, String GROUPID, String MSG) {
 		ContentValues data = new ContentValues();
-		data.put("number", NUMBER);
+		data.put("phones", NUMBER);
+		data.put("groupid", GROUPID);
 		data.put("msg", MSG);
 		
 		open(); 
 		database.insert(TB_SEND_SMS, null, data);
 		close();            
     }
+	
+	public Cursor select_SMS_DATA() {
+    	return database.rawQuery("SELECT _id, phones, groupid, msg FROM tbSendSMS LIMIT 1", null);
+    }
+	
+	public boolean delete_SMS_DATA(String _id){
+		
+		open(); 
+		database.delete(TB_SEND_SMS, "_id = " + _id, null);
+		close(); 
+		
+		return false;
+	}
 	
 	public AlarmDb(Context context) {
 		String DATABASE_NAME = "smsinformer";

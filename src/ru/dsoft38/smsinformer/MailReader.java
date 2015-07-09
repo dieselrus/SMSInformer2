@@ -12,18 +12,22 @@ import javax.mail.Session;
 import javax.mail.Store;
 import javax.mail.search.FlagTerm;
 
+import android.content.Context;
 import android.util.Log;
 
 public class MailReader extends Authenticator{
 
-	private static final String TAG = "GMailReader";
+	private static final String TAG = "MailReader";
 
 	private String mailhost = "imap.yandex.ru";  
 	private Session session;
 	private Store store;
+	private Context context;
 
-	public MailReader(String user, String password) {
+	public MailReader(Context context, String user, String password) {
 
+		this.context = context;
+		
 		Properties props = System.getProperties();
 		if (props == null){
 			Log.e(TAG, "Properties are null !!");
@@ -48,7 +52,7 @@ public class MailReader extends Authenticator{
 		}
 	}
 
-	public synchronized Message[] readMail() throws Exception { 
+	public synchronized boolean readMail() throws Exception { 
 		try { 
 			Folder folder = store.getFolder("Inbox"); 
 			folder.open(Folder.READ_WRITE);
@@ -68,28 +72,53 @@ public class MailReader extends Authenticator{
 		    FlagTerm unseenFlagTerm = new FlagTerm(seen, false);
 		    Message msgs[] = folder.search(unseenFlagTerm);		    	
 		    
-		    // Удалим из массива не нужные письма письма (другая тема)
+		    // Получим доступ к БД
+		    AlarmDb db = new AlarmDb(context);
+		    
+		    // Переберем все новые письма, отберем по нужной теме и запишем данные в БД
 		    for(int i = msgs.length - 1; i >= 0; i--){
-		    	String subject = msgs[i].getSubject().toString().toLowerCase().trim(); //Получение темы письма
+		    	String subject = msgs[i].getSubject().toString().trim(); //Получение темы письма
 		    	
 		    	if(!subject.equalsIgnoreCase("SMSINFORMER")){
 		    		continue;
 		    	}
 		    	
+		    	// Текст письма
+		    	String content = msgs[i].getContent().toString().trim();
 		    	
+		    	/*<PhoneList> </PhoneList>*/
+		    	int firstPos = content.indexOf("<PhoneList>");
+		    	int endPos = content.indexOf("</PhoneList>");
+		    	String PhoneList = content.substring(firstPos + 11, endPos).trim();
+		    	
+		    	/*<GroupID> </GroupID>*/
+		    	firstPos = content.indexOf("<GroupID>");
+		    	endPos = content.indexOf("</GroupID>");
+		    	String GroupID = content.substring(firstPos + 9, endPos).trim();
+		    	
+		    	/*<MessageText> </MessageText>*/
+		    	firstPos = content.indexOf("<MessageText>");
+		    	endPos = content.indexOf("</MessageText>");
+		    	
+		    	if(endPos - (firstPos + 13) > 60){
+		    		endPos = firstPos + 13 + 59;
+		    	}
+		    	
+		    	String MSG = content.substring(firstPos + 13, endPos).trim(); // СМС 60 символов
+		    	
+		    	db.insertAlarm(PhoneList, GroupID, MSG);
 		    	
 		    }
 		    
 		    // Пометим как прочитанные
-		    folder.setFlags(msgs, new Flags(Flags.Flag.SEEN), true);
+		    //folder.setFlags(msgs, new Flags(Flags.Flag.SEEN), true);
 		    folder.close(false); 
 	        store.close();
-	        //db.close();
 			
-			return msgs; 
+			return true; 
 		} catch (Exception e) { 
 			Log.e("readMail", e.getMessage(), e); 
-			return null; 
+			return false; 
 		} 
 	} 
 
